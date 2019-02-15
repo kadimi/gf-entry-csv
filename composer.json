@@ -8,7 +8,8 @@
         }
     ],
     "require": {
-        "tgmpa/tgm-plugin-activation": "^2.5"
+        "tgmpa/tgm-plugin-activation": "^2.5",
+        "league/csv": "^9.1"
     },
     "require-dev": {
         "kint-php/kint": "^2.1"
