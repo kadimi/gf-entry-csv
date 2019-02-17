@@ -1,13 +1,13 @@
 <?php
 /**
- * Plugin Name: Starter
+ * Plugin Name: Entry CSV Addon for Gravity Forms
  * Plugin URI: https://www.github.com/kadimi/starter
  * GitHub Plugin URI: https://github.com/kadimi/kadimi.com-plugin
  * Description: Wordpress starter plugin.
  * Version: 1.0.0
  * Author: Nabil Kadimi
  * Author URI: http://kadimi.com
- * Text Domain: starter
+ * Text Domain: gfecsv
  * License: GPL2
  *
  * @package starter
