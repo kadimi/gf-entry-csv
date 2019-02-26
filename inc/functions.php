@@ -252,14 +252,54 @@ function gfecsv_generate_csv( $entry ) {
 		;
 		return $a > $b;
 	} );
+
+	/**
+	 * Handle fields
+	 */
 	foreach ( $fields as $field ) {
-		$label = ! empty ( $field->field_gfecsv_column_label )
-			? $field->field_gfecsv_column_label
-			: $field->label
-		;
-		$data[ $label ] = $field->get_value_export( $entry );
+		$label = ! empty ( $field->field_gfecsv_column_label ) ? $field->field_gfecsv_column_label : $field->label;
+		if ( strstr( $label, ',' ) ) {
+			/**
+			 * Handle Advanced fields.
+			 */
+			$values = $field->get_value_submission( [] );
+			$sub_labels = explode( ',', $label );
+			foreach ( $sub_labels as $sub_label ) {
+				preg_match( '/^(\d+):(.+)$/', $sub_label, $sub_label_parts );
+				if ( $sub_label_parts ) {
+					/**
+					 * Handle 123:label.
+					 */
+					if ( array_key_exists( "{$field->id}.{$sub_label_parts[1]}", $values ) ) {
+						$data[ $sub_label_parts[2] ] = $values[ "{$field->id}.{$sub_label_parts[1]}" ];
+					}
+				} else if ( is_numeric( $sub_label ) ) {
+					/**
+					 * Handle 123.
+					 */
+					if ( array_key_exists( "{$field->id}.{$sub_label}", $values ) ) {
+						foreach ( $field->inputs as $input ) {
+							if ( "{$field->id}.{$sub_label}" === $input[ 'id' ] ) {
+								$data[ $input[ 'name' ][ 'customLabel' ] ?? $input[ 'label' ] ] = $values[ "{$field->id}.{$sub_label}" ];
+							}
+						}
+					}
+				} else {
+					/**
+					 * Handle label.
+					 */
+					if ( array_key_exists( $ub_label, $values ) ) {
+						$data[ $sub_label ] = $values[ $label ];
+					}
+				}
+			}
+		} else {
+			/**
+			 * Handle standard fields.
+			 */
+			$data[ $label ] = $field->get_value_export( $entry );
+		}
 	}
-	unset( $fields, $label );
 
 	/**
 	 * Create CSV.
