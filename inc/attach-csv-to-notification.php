@@ -12,7 +12,7 @@ add_filter( 'gform_notification', function ( $notification, $form, $entry ) {
 	/**
 	 * Prepare file content.
 	 */
-	$content = gfecsv_generate_csv( $entry );
+	$content = gfecsv_generate_csv( $entry, $notification );
 	if ( empty( $content ) ) {
 		return $notification;
 	}

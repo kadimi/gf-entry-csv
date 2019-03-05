@@ -6,7 +6,7 @@
  * @param  int|object  $entry Entry or entry id.
  * @return string             The CSV.
  */
-function gfecsv_generate_csv( $entry ) {
+function gfecsv_generate_csv( $entry, $subject = null ) {
 
 	/**
 	 * Get entry.
@@ -35,24 +35,20 @@ function gfecsv_generate_csv( $entry ) {
 		return ! empty( $field->field_gfecsv_include_in_csv );
 	} );
 
-	usort( $fields , function( $a, $b ) {
-		$a = ! empty ( $a->field_gfecsv_column_order )
-			? $a->field_gfecsv_column_order
-			: 0
-		;
-		$b = ! empty ( $b->field_gfecsv_column_order )
-			? $b->field_gfecsv_column_order
-			: 0
-		;
-		return $a > $b;
-	} );
-
 	/**
-	 * Handle fields
+	 * Grab info from fields.
 	 */
-	$data = [];
-	foreach ( $fields as $field ) {
-		$label = ! empty ( $field->field_gfecsv_column_label ) ? $field->field_gfecsv_column_label : $field->label;
+	$_fields = [];
+	foreach ( $fields as $field) {
+		$label = ! empty ( $field->field_gfecsv_column_label )
+			? $field->field_gfecsv_column_label
+			: $field->label
+		;
+		$order = ! empty ( $field->field_gfecsv_column_order )
+			? $field->field_gfecsv_column_order
+			: 0
+		;
+		$value = $field->get_value_export( $entry );
 		if ( strstr( $label, ',' ) ) {
 			/**
 			 * Handle Advanced fields.
@@ -60,43 +56,51 @@ function gfecsv_generate_csv( $entry ) {
 			$values = $field->get_value_submission( [] );
 			$sub_labels = explode( ',', $label );
 			foreach ( $sub_labels as $sub_label ) {
-				preg_match( '/^(\d+):(.+)$/', $sub_label, $sub_label_parts );
+				preg_match( '/^(?<input_id>\d+)(?::(?<order>\d+))?(?::(?<label>.+))?$/', $sub_label, $sub_label_parts );
 				if ( $sub_label_parts ) {
-					/**
-					 * Handle 123:label.
-					 */
-					if ( array_key_exists( "{$field->id}.{$sub_label_parts[1]}", $values ) ) {
-						$data[ $sub_label_parts[2] ] = $values[ "{$field->id}.{$sub_label_parts[1]}" ];
-					}
-				} else if ( is_numeric( $sub_label ) ) {
-					/**
-					 * Handle 123.
-					 */
-					if ( array_key_exists( "{$field->id}.{$sub_label}", $values ) ) {
-						foreach ( $field->inputs as $input ) {
-							if ( "{$field->id}.{$sub_label}" === $input[ 'id' ] ) {
-								$data[ $input[ 'name' ][ 'customLabel' ] ?? $input[ 'label' ] ] = $values[ "{$field->id}.{$sub_label}" ];
-							}
-						}
-					}
-				} else {
-					/**
-					 * Handle label.
-					 */
-					if ( array_key_exists( $sub_label, $values ) ) {
-						$data[ $sub_label ] = $values[ $label ];
-					}
+					$input = gfecsv_get_advanced_field_input( $field, $sub_label_parts[ 'input_id' ] );
+					$_fields[] = [
+						'order' => ! empty ( $sub_label_parts[ 'order' ] )
+							? $sub_label_parts[ 'order' ]
+							: $order
+						,
+						'label' => ! empty ( $sub_label_parts[ 'label' ] )
+							? $sub_label_parts[ 'label' ]
+							: (
+								! empty( $input[ 'customLabel' ] )
+									? $input[ 'customLabel' ]
+									: $input[ 'label' ]
+							)
+						,
+						'value' => $values[ "{$field->id}.{$sub_label_parts[input_id]}" ],
+					];
 				}
 			}
 		} else {
 			/**
 			 * Handle standard fields.
 			 */
-			$data[ $label ] = $field->get_value_export( $entry );
+			$_fields[] = compact( 'order', 'label', 'value' );
 		}
 	}
 
-	$data = apply_filters( 'gfecsv_generate_csv', $data );
+	/**
+	 * Sort fields;
+	 */
+	sort( $_fields );
+
+	/**
+	 * Allow extending
+	 */
+	$_fields = apply_filters( 'gfecsv_generated_csv_fields', $_fields, $subject );
+	/**
+	 * Prepare data for CSV.
+	 */
+	$data = [];
+	foreach ( $_fields as $field ) {
+		$data[ $field[ 'label' ] ] = $field[ 'value' ];
+	}
+	$data = apply_filters( 'gfecsv_generated_csv_data', $data, $subject );
 
 	/**
 	 * Create CSV.
@@ -286,4 +290,13 @@ function gfecsv_add_field_setting( string $name, string $title, string $type = '
 	}, 10, 3 );
 
 	do_action( "gfecsv_after_field_setting_$name" );
+}
+
+function gfecsv_get_advanced_field_input( $field, $input_id ) {
+	foreach ( $field->inputs as $input ) {
+		if ( "{$field->id}.{$input_id}" === $input[ 'id' ] ) {
+			return $input;
+		}
+	}
+	return false;
 }
