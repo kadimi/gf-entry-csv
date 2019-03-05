@@ -92,7 +92,7 @@ function gfecsv_generate_csv( $entry, $subject = null ) {
 	/**
 	 * Allow extending
 	 */
-	$_fields = apply_filters( 'gfecsv_generated_csv_fields', $_fields, $subject );
+	$_fields = apply_filters( 'gfecsv_generated_csv_fields', $_fields, $entry, $subject );
 	/**
 	 * Prepare data for CSV.
 	 */
@@ -100,7 +100,7 @@ function gfecsv_generate_csv( $entry, $subject = null ) {
 	foreach ( $_fields as $field ) {
 		$data[ $field[ 'label' ] ] = $field[ 'value' ];
 	}
-	$data = apply_filters( 'gfecsv_generated_csv_data', $data, $subject );
+	$data = apply_filters( 'gfecsv_generated_csv_data', $data, $entry, $subject );
 
 	/**
 	 * Create CSV.
